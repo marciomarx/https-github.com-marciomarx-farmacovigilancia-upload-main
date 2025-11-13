@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Flashcards | Farmacovigilância – Ciclo ANVISA/VigiMed</title>
+  <style>
+    :root{
+      --bg:#eaf4ff;
+      --card:#ffffff;
+      --fg:#1f2937;
+      --muted:#51646f;
+      --accent:#1f8b5f;
+      --accent-2:#146c47;
+      --shadow:0 8px 20px rgba(0,0,0,.08);
+      --radius:18px;
+      --pad:clamp(12px,2.5vw,20px);
+      --tap:clamp(44px,6.5vh,56px);
+      --maxw:720px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0}
+    body{
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+      background:var(--bg);
+      color:var(--fg);
+      display:flex; flex-direction:column; align-items:center;
+      padding:env(safe-area-inset-top) var(--pad) calc(var(--tap)+24px) var(--pad);
+    }
+    .header{
+      width:100%; max-width:var(--maxw);
+      text-align:center; color:var(--muted);
+      font-size:clamp(14px,2.8vw,16px);
+      margin:12px 0 8px 0;
+    }
+    .progress{
+      width:100%; max-width:var(--maxw);
+      display:flex; justify-content:space-between; align-items:center;
+      font-size:clamp(13px,2.5vw,15px);
+      color:var(--muted);
+      margin-bottom:8px;
+    }
+    .container{
+      width:100%; max-width:var(--maxw); flex:1; display:flex; align-items:center; justify-content:center;
+    }
+    .card{
+      width:100%; background:var(--card); border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:clamp(18px,5vw,28px);
+      min-height:min(70vh,560px);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center;
+      transition:transform .25s ease;
+      user-select:none; -webkit-tap-highlight-color: transparent;
+    }
+    .card:active{ transform:scale(.995) }
+    .title-card{
+      font-size:clamp(22px,5.5vw,32px);
+      line-height:1.25; color:#395562; font-weight:700;
+    }
+    .subtitle{
+      margin-top:8px; color:var(--muted); font-size:clamp(14px,3.2vw,16px);
+    }
+    .question{
+      font-size:clamp(18px,4.8vw,24px);
+      color:#2c4753; margin-bottom:12px; font-weight:600;
+    }
+    .hint{
+      font-size:clamp(12px,3vw,14px); color:var(--muted); margin-bottom:12px;
+    }
+    .answer{
+      display:none;
+      font-size:clamp(16px,4.2vw,20px);
+      color:var(--accent);
+      line-height:1.45;
+    }
+    .show-answer .answer{ display:block; animation:fade .25s ease }
+    @keyframes fade{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
+
+    .navigation{
+      position:fixed; left:0; right:0; bottom:0;
+      padding:8px clamp(10px,4vw,18px) calc(8px + env(safe-area-inset-bottom));
+      background:linear-gradient(180deg, rgba(234,244,255,0) 0%, rgba(234,244,255,.95) 30%, rgba(234,244,255,.98) 100%);
+      display:flex; gap:10px; justify-content:center; align-items:center;
+      backdrop-filter: blur(6px);
+    }
+    .navigation button{
+      flex:1 1 0; max-width:220px;
+      height:var(--tap);
+      border:0; border-radius:999px;
+      background:var(--accent); color:white;
+      font-weight:700; font-size:clamp(15px,4vw,17px); letter-spacing:.2px;
+      box-shadow:0 6px 14px rgba(31,139,95,.25);
+      cursor:pointer;
+      transition:background .2s ease, transform .05s ease;
+    }
+    .navigation button.secondary{ background:#6ba486 }
+    .navigation button:active{ transform:translateY(1px) }
+    .sr-only{
+      position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">Projetado por Professor Márcio Marques — Farmacovigilância | Ciclo ANVISA/VigiMed</div>
+  <div class="progress" aria-live="polite">
+    <span id="progressText">Início</span>
+    <span id="tapTip">Toque no card para revelar a resposta</span>
+  </div>
+
+  <div class="container">
+    <div class="card" id="card" role="button" aria-pressed="false" tabindex="0" aria-describedby="tapTip">
+      <div class="title-card">AMC – Glossário Essencial</div>
+      <div class="subtitle">Termos e siglas para Análise de Minimização de Custo</div>
+    </div>
+  </div>
+
+  <div class="navigation" role="group" aria-label="Navegação dos cards">
+    <button class="secondary" id="prevBtn" type="button">Anterior</button>
+    <button class="secondary" id="homeBtn" type="button">Início</button>
+    <button id="nextBtn" type="button">Próximo</button>
+  </div>
+
+  <script>
+    // Cards do glossário AMC (somente termos e siglas essenciais do glossário solicitado)
+    const cardsData = [
+      {pergunta:"O que é farmacovigilância?", resposta:"É a ciência e o conjunto de atividades relativas à detecção, avaliação, compreensão e prevenção de efeitos adversos ou outros problemas relacionados ao uso de medicamentos."},
+      {pergunta:"Qual é o objetivo central da farmacovigilância?", resposta:"Garantir que, no uso em vida real, os benefícios dos medicamentos permaneçam superiores aos riscos para a população exposta."},
+      {pergunta:"O que representa a etapa 'Medicar' no ciclo da farmacovigilância?", resposta:"É a transição do medicamento do registro para o uso real em pacientes, quando passa a ser prescrito e administrado na prática clínica."},
+      {pergunta:"Por que a etapa 'Medicar' é crucial para a segurança?", resposta:"Porque somente no uso real, em populações amplas e heterogêneas, emergem eventos adversos que não foram observados nos ensaios clínicos."},
+      {pergunta:"Dê um exemplo clínico da etapa 'Medicar'.", resposta:"Introdução de um novo antibiótico hospitalar prescrito a pacientes com múltiplas comorbidades, marcando o início do uso em vida real."},
+      {pergunta:"O que ocorre na etapa 'Identificar' do ciclo de farmacovigilância?", resposta:"A detecção de possíveis eventos adversos, falhas de eficácia, interações medicamentosas, erros de administração, uso off-label e problemas de qualidade."},
+      {pergunta:"Por que a identificação precoce de eventos adversos é importante?", resposta:"Porque permite reconhecer rapidamente novos riscos ou ampliar o conhecimento sobre eventos pouco descritos, preservando a relação benefício-risco."},
+      {pergunta:"Dê um exemplo prático da etapa 'Identificar'.", resposta:"Observação de casos de colite pseudomembranosa ou dano renal em pacientes tratados com um antibiótico recém-introduzido."},
+      {pergunta:"O que significa 'Notificar' em farmacovigilância?", resposta:"É o ato de comunicar formalmente o evento adverso ou suspeita de problema ao sistema regulador, como o VigiMed no Brasil."},
+      {pergunta:"É necessário ter certeza de causalidade para notificar um evento?", resposta:"Não. Qualquer ocorrência médica indesejável após uso de medicamento ou vacina deve ser notificada, mesmo sem certeza da relação causal."},
+      {pergunta:"Dê um exemplo clínico da etapa 'Notificar'.", resposta:"O farmacêutico hospitalar registra no VigiMed um caso de insuficiência renal em paciente que utilizou determinado antibiótico."},
+      {pergunta:"O que significa a etapa 'Coletar' no ciclo de farmacovigilância?", resposta:"É a obtenção sistemática e padronizada de dados relevantes sobre o paciente, o medicamento suspeito, a reação, o tempo de uso e o desfecho."},
+      {pergunta:"Por que existem campos obrigatórios na notificação do VigiMed?", resposta:"Para garantir um mínimo de dados que permita rastrear o caso, codificar o evento, avaliar causalidade e integrar a notificação a bases nacionais e internacionais."},
+      {pergunta:"Cite exemplos de dados coletados em uma notificação de evento adverso.", resposta:"Idade, sexo, iniciais, nome e dose do medicamento, lote, tempo de uso, data de início da reação e desfecho clínico."},
+      {pergunta:"O que ocorre na etapa 'Analisar'?", resposta:"Os dados são avaliados quanto à causalidade, gravidade, frequência, padrão de ocorrência e impacto na relação benefício-risco do medicamento."},
+      {pergunta:"Cite métodos utilizados para avaliação de causalidade em farmacovigilância.", resposta:"Algoritmo de Naranjo, método padronizado OMS-UMC e análise clínica narrativa estruturada."},
+      {pergunta:"Dê um exemplo de análise regulatória de sinal de segurança.", resposta:"A agência identifica múltiplas notificações de nefrotoxicidade associada a um antibiótico e recomenda atualização de bula com advertência específica."},
+      {pergunta:"O que significa 'Agir' no ciclo da farmacovigilância?", resposta:"Implementar medidas de intervenção como alteração de bula, restrição de uso, alertas, planos de gerenciamento de risco ou até retirada do mercado."},
+      {pergunta:"Cite exemplos de ações regulatórias possíveis após identificação de um risco.", resposta:"Inclusão de alerta em bula, exigência de monitorização laboratorial, limitação de indicação, comunicação de risco ou suspensão do registro."},
+      {pergunta:"O que compreende a etapa 'Comunicar'?", resposta:"A divulgação das informações de segurança e das ações adotadas para profissionais de saúde, pacientes, serviços de saúde e organismos internacionais."},
+      {pergunta:"Qual é o objetivo da etapa 'Prevenir' no ciclo de farmacovigilância?", resposta:"Evitar que riscos se concretizem ou se repitam, por meio do uso seguro, monitoramento contínuo, notificação, análise, ação e comunicação efetiva."},
+      {pergunta:"O que é o sistema VigiMed?", resposta:"É o sistema eletrônico da ANVISA para notificação de eventos adversos de medicamentos e vacinas, correspondente à adaptação brasileira do VigiFlow da OMS/UMC."},
+      {pergunta:"Que tipos de ocorrência devem ser notificados no VigiMed?", resposta:"Reações adversas, suspeita de falta de eficácia, erros de medicação, interações, uso off-label com problema, intoxicações e outros eventos clínicos indesejáveis."},
+      {pergunta:"Que tipo de problema permanece no sistema Notivisa e não no VigiMed?", resposta:"Queixas técnicas de qualidade, como falhas de embalagem, rótulo, corpo estranho ou suspeita de falsificação, quando não há evento adverso associado."},
+      {pergunta:"Quando uma queixa técnica deve ser registrada no VigiMed e não apenas no Notivisa?", resposta:"Quando a falha de qualidade estiver associada a um evento adverso que tenha afetado o paciente."},
+      {pergunta:"Quais são exemplos de campos mínimos de identificação do paciente em uma notificação VigiMed?", resposta:"Iniciais ou sexo ou idade ou data de nascimento, garantindo anonimato e rastreabilidade básica."},
+      {pergunta:"Quais dados mínimos devem existir sobre o medicamento na notificação?", resposta:"Pelo menos um medicamento suspeito ou dois em interação, com nome, forma, dose e, se possível, lote."},
+      {pergunta:"Como a reação adversa deve ser registrada no VigiMed?", resposta:"Descrita conforme relatado pelo notificador e, idealmente, codificada por meio da terminologia MedDRA."},
+      {pergunta:"Por que a completude dos dados de notificação é tão importante?", resposta:"Porque informações insuficientes dificultam o agrupamento de casos, a avaliação de causalidade, a investigação de lotes e a tomada de decisões regulatórias."},
+      {pergunta:"O que é a MedDRA em farmacovigilância?", resposta:"É uma terminologia médico-regulatória internacional padronizada para codificação de eventos adversos, permitindo comparabilidade global."},
+      {pergunta:"O que é o WHODrug?", resposta:"É um sistema internacional de codificação de medicamentos e vacinas usado para padronizar nomes e classes em bancos de farmacovigilância."},
+      {pergunta:"Quem é o Detentor de Registro de Medicamento (DRM)?", resposta:"É a empresa ou instituição responsável pelo registro sanitário do medicamento e por estruturar o sistema de farmacovigilância relacionado a ele."},
+      {pergunta:"Quem é o Responsável pela Farmacovigilância (RFV)?", resposta:"É o profissional designado pelo detentor de registro, com formação adequada, residente no Brasil e responsável técnico pelo sistema de farmacovigilância da empresa."},
+      {pergunta:"O que é o Plano de Gerenciamento de Risco (PGR)?", resposta:"Documento que integra as ações de farmacovigilância de rotina com medidas adicionais de minimização de risco para determinado medicamento."},
+      {pergunta:"O que é o Relatório Periódico de Avaliação Benefício-Risco (RPBR)?", resposta:"Documento técnico periódico que compila dados de segurança e eficácia, avaliando a relação benefício-risco de um medicamento ao longo do tempo."},
+      {pergunta:"O que regulamenta a RDC 406/2020?", resposta:"As Boas Práticas de Farmacovigilância para detentores de registro de medicamentos de uso humano no Brasil."},
+      {pergunta:"Sobre o que trata a IN 63/2020?", resposta:"Sobre os requisitos para elaboração e submissão do Relatório Periódico de Avaliação Benefício-Risco à ANVISA."},
+      {pergunta:"O que é a 'Data de Nascimento Internacional' de um princípio ativo?", resposta:"É a data da primeira aprovação regulatória do fármaco no mundo, usada como referência para cronogramas de envio de relatórios de segurança."},
+      {pergunta:"O que se entende por vigilância pós-registro?", resposta:"Monitorização contínua da segurança e efetividade dos medicamentos após sua entrada no mercado, em condições de uso em vida real."},
+      {pergunta:"O que é um Evento Adverso (EA)?", resposta:"Qualquer ocorrência médica indesejável que surge após a administração de um medicamento ou vacina, sem necessidade de comprovação de relação causal."},
+      {pergunta:"O que é uma Reação Adversa a Medicamento (RAM)?", resposta:"Evento adverso para o qual existe uma relação de causalidade razoável com o uso do medicamento, em doses normalmente utilizadas em humanos."},
+      {pergunta:"O que é uso off-label?", resposta:"Utilização de medicamentos fora das indicações, posologia, faixa etária ou vias de administração aprovadas na bula."},
+      {pergunta:"O que é erro de medicação?", resposta:"Qualquer falha evitável no processo de prescrição, dispensação, administração ou monitorização do medicamento que possa causar dano ao paciente."},
+      {pergunta:"O que é um sinal de segurança em farmacovigilância?", resposta:"Informação sobre um possível novo risco ou aumento de risco conhecido, que justifica investigação adicional."},
+      {pergunta:"O que significa avaliação de causalidade em farmacovigilância?", resposta:"Processo de estimar o grau de relação entre o medicamento suspeito e o evento adverso observado."},
+      {pergunta:"Por que a etapa de comunicação é essencial no ciclo de farmacovigilância?", resposta:"Porque somente com a disseminação das informações os profissionais ajustam sua prática, os pacientes são orientados e as medidas de segurança tornam-se efetivas."},
+      {pergunta:"Quem está autorizado a notificar eventos adversos no sistema brasileiro?", resposta:"Qualquer cidadão, profissional de saúde ou detentor de registro de medicamento pode realizar a notificação."},
+      {pergunta:"Por que muitos eventos adversos só são identificados após a comercialização do medicamento?", resposta:"Porque os ensaios clínicos envolvem populações limitadas, tempo restrito e critérios de inclusão rígidos, não refletindo toda a variabilidade do mundo real."},
+      {pergunta:"Para qual organismo internacional o Brasil envia dados anonimizados de eventos adversos?", resposta:"Para o Uppsala Monitoring Centre, vinculado à Organização Mundial da Saúde, que mantém o banco global de segurança de medicamentos."}
+    ];
+
+    let current = 0; // 0 = título
+    const total = cardsData.length;
+    const cardEl = document.getElementById('card');
+    const progressEl = document.getElementById('progressText');
+    const prevBtn = document.getElementById('prevBtn');
+    const homeBtn = document.getElementById('homeBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    function render(){
+      if(current===0){
+        cardEl.classList.remove('show-answer');
+        cardEl.innerHTML = `
+          <div class="title-card">Flashcards de Farmacovigilância</div>
+          <div class="subtitle">Ciclo ANVISA/VigiMed, legislação e conceitos essenciais</div>
+        `;
+
+        progressEl.textContent = "Início";
+      }else{
+        const item = cardsData[current-1];
+        cardEl.innerHTML = `
+          <div class="question">${item.pergunta}</div>
+          <div class="hint">Toque para revelar a resposta</div>
+          <div class="answer">${item.resposta}</div>
+        `;
+        cardEl.classList.remove('show-answer');
+        progressEl.textContent = `Card ${current} de ${total}`;
+      }
+      prevBtn.disabled = (current===0);
+      nextBtn.disabled = (current===total);
+    }
+
+    function go(delta){
+      current = Math.min(Math.max(0, current + delta), total);
+      render();
+      localStorage.setItem("amc_glossario_progress", String(current));
+    }
+
+    prevBtn.addEventListener('click', ()=>go(-1));
+    homeBtn.addEventListener('click', ()=>{ current=0; render(); localStorage.setItem("amc_glossario_progress","0"); });
+    nextBtn.addEventListener('click', ()=>go(+1));
+
+    cardEl.addEventListener('click', ()=>{
+      if(current!==0){ cardEl.classList.toggle('show-answer'); }
+    });
+    cardEl.addEventListener('keydown',(e)=>{
+      if(e.key==='Enter' || e.key===' '){
+        e.preventDefault();
+        if(current===0){ go(1); } else { cardEl.classList.toggle('show-answer'); }
+      }else if(e.key==='ArrowRight'){ go(+1); }
+      else if(e.key==='ArrowLeft'){ go(-1); }
+      else if(e.key==='Home'){ current=0; render(); }
+    });
+
+    // Suporte a swipe (mobile)
+    let startX=null;
+    cardEl.addEventListener('touchstart', (e)=>{ startX = e.changedTouches[0].clientX; }, {passive:true});
+    cardEl.addEventListener('touchend', (e)=>{
+      if(startX===null) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const TH = 40; // limiar
+      if(dx > TH) go(-1);
+      if(dx < -TH) go(+1);
+      startX=null;
+    }, {passive:true});
+
+    // Restaurar progresso
+    const saved = Number(localStorage.getItem("amc_glossario_progress"));
+    if(Number.isFinite(saved) && saved>=0 && saved<=total){ current=saved; }
+    render();
+  </script>
+</body>
+</html>
